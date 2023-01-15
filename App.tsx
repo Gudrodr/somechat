@@ -16,10 +16,10 @@ import { Settings } from './src/components/Settings/Settings';
 
 
 const App = () => {
-  const conn = useConnection();
   const [ state, dispatch ] = useReducer(reducer, initialState);
   const { width, height } = useWindowDimensions();
   const isDarkMode = useColorScheme() === 'dark';
+  const { flowFromNetwork, flowToNetwork } = useConnection();
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
@@ -27,11 +27,11 @@ const App = () => {
   };
 
   useEffect(() => {
-    conn.subscribe({
+    flowFromNetwork.subscribe({
       next: (event) => dispatch(event),
     });
 
-    return () => conn.unsubscribe();
+    return () => flowFromNetwork.unsubscribe();
   }, []);
 
   return (  
@@ -47,7 +47,7 @@ const App = () => {
         <Sidebar state={state} dispatch={dispatch} />
         {state.view === 'main'
           ? <Chat messages={state.messages} />
-          : <Settings state={state} dispatch={dispatch} />
+          : <Settings state={state} dispatch={dispatch} flowToNetwork={flowToNetwork} />
         }
       </View>
     </SafeAreaView>

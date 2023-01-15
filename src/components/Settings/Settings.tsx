@@ -2,10 +2,18 @@ import React, { Dispatch } from 'react';
 import { Action } from '../../reducer/actions';
 import { StateType } from '../../reducer/reducer';
 import { ChatSettings } from './ChatSettings';
-import { ConnectionSettings } from './ConnectionSettings';
+import { Accounts } from './Accounts/Accounts';
+import { Subject } from 'rxjs';
+import { ConnectionAction } from '../../connection/actions';
 
-export const Settings = (props: { state: StateType, dispatch: Dispatch<Action> }) => {
-    return props.state.view === 'connectionSetting'
-        ? <ConnectionSettings />
+export interface SettingsProps {
+    state: StateType;
+    dispatch: Dispatch<Action>;
+    flowToNetwork: Subject<ConnectionAction>;
+}
+
+export const Settings = (props: SettingsProps) => {
+    return props.state.view === 'accountsSetting'
+        ? <Accounts state={props.state} dispatch={props.dispatch} flowToNetwork={props.flowToNetwork} />
         : <ChatSettings />
 };

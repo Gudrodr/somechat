@@ -1,4 +1,4 @@
-import { MessageType, ScreenView } from "./reducer";
+import { MessageType, Platform, ScreenView } from "./reducer";
 
 interface NewMessage {
     type: 'newMessage';
@@ -24,4 +24,35 @@ interface ChageView {
     payload: ScreenView;
 }
 
-export type Action = NewMessage | DeleteMessage | BanUser | ChageView;
+interface ConnectAccount {
+    type: 'connectAccount';
+    payload: Platform;
+
+}
+
+interface DisconnectAccount {
+    type: 'disconnectAccount';
+    payload: Platform;
+
+}
+
+interface ConnectPlatform {
+    type: 'connectPlatform';
+    payload: Platform;
+
+}
+
+interface DisconnectPlatform {
+    type: 'disconnectPlatform';
+    payload: Platform;
+
+}
+
+export type Action = NewMessage
+    | DeleteMessage
+    | BanUser 
+    | ChageView 
+    | ConnectAccount 
+    | DisconnectAccount
+    | ConnectPlatform
+    | DisconnectPlatform;

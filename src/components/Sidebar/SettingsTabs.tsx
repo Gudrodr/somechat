@@ -1,9 +1,8 @@
 import React, { Dispatch } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Action } from '../../reducer/actions';
-import { StateType } from '../../reducer/reducer';
+import { SidebarProps } from './Sidebar';
 
-export const SettingsTabs = (props: { state: StateType, dispatch: Dispatch<Action> }) => {
+export const SettingsTabs = (props: SidebarProps) => {
     const { state, dispatch } = props;
     return (
         <View

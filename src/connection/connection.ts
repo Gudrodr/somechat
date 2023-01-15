@@ -1,7 +1,14 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Subject } from "rxjs";
 import { Action } from "../reducer/actions";
-import { ggCreds, twitchCreds } from "./credentials";
+import { twitchCreds } from "./credentials";
+import EncryptedStorage from 'react-native-encrypted-storage';
+import { ConnectionAction } from "./actions";
+
+export interface Credentials {
+    login: string;
+    password: string;
+}
 
 export const getTwitchData = () => fetch('https://id.twitch.tv/oauth2/token', {
     method: 'POST',
@@ -14,35 +21,74 @@ export const getTwitchData = () => fetch('https://id.twitch.tv/oauth2/token', {
     .then(response => response.json())
     .then(data => console.log(data));
 
-const useGG = (subject: Subject<Action>) => {
-    const [credentials, setCredentials] = useState<{ user_id: string; token: string; result: boolean } | undefined>();
+export const getGGsession = async (creds: Credentials) => {
+    const formdata = new FormData();
+    formdata.append("login", creds.login);
+    formdata.append("password", creds.password);
+    return await fetch('https://goodgame.ru/ajax/chatlogin', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: formdata,
+    }).then(response => response.json()).then(data => ({
+        user_id: data.user_id,
+        token: data.token,
+        result: data.result,
+    }));
+}
+
+const useGG = (fromNetwork: Subject<Action>, toNetwork: Subject<ConnectionAction>) => {
+    const [ session, setSession ] = useState<{ user_id: string; token: string; result: boolean} | undefined>();
     const ws = useRef<WebSocket | null>(null);
-    const obs = useRef(subject);
 
-    useEffect(() => {
-        const getCreds = async () => {  
-            const formdata = new FormData();
-            formdata.append("login", ggCreds.login);
-            formdata.append("password", ggCreds.password);
-            return await fetch('https://goodgame.ru/ajax/chatlogin', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json; charset=UTF-8',
-                },
-                body: formdata,
-            }).then(response => response.json()).then(data => setCredentials({
-                user_id: data.user_id,
-                token: data.token,
-                result: data.result,
-            }));
+    const getSavedCreds = useCallback(async (): Promise<Credentials | null> => {
+        const creds = await EncryptedStorage.getItem('gg');
+        if (!creds) return null;
+        return JSON.parse(creds);
+    }, []);
+
+    const getSavedSessionData = useCallback(async () => {
+        const session = await EncryptedStorage.getItem('ggSession');
+        console.log('GET_SESSION_DATA', session);
+        if (!session) return null;
+        return JSON.parse(session);
+    }, []);
+
+
+    const runSession = useCallback(async () => {
+        const sessionData = await getSavedSessionData();
+        console.log('SESSION_DATA', sessionData);
+        if (sessionData) {
+            setSession(sessionData);
+        } else {
+            const creds = await getSavedCreds();
+            if (creds) {
+                const newSessionData = await getGGsession(creds);
+                if (newSessionData.result) {
+                    EncryptedStorage.setItem('ggSession', JSON.stringify(newSessionData));
+                    setSession(newSessionData);
+                }
+            }
         }
-
-        getCreds();
     }, []);
 
     useEffect(() => {
-        if (!credentials) return;
+        // runSession();
+    }, []);
 
+    
+    useEffect(() => {
+        toNetwork.subscribe({
+            next: (event) => {},
+            error: (err) => console.error(err),
+        });
+
+        return () => toNetwork.unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        if (!session) return;
         ws.current = new WebSocket('wss://chat.goodgame.ru/chat/websocket');
 
         ws.current.onopen = () => {
@@ -50,8 +96,8 @@ const useGG = (subject: Subject<Action>) => {
             ws.current?.send(JSON.stringify({
                 type: 'auth',
                 data: {
-                    user_id: credentials.user_id,
-                    token: credentials.token,
+                    user_id: session.user_id,
+                    token: session.token,
                 }
             }));
         };
@@ -69,8 +115,14 @@ const useGG = (subject: Subject<Action>) => {
                         }
                     }));
                     break;
+                case 'success_join':
+                    fromNetwork.next({
+                        type: 'connectPlatform',
+                        payload: 'gg',
+                    });
+                    break;
                 case 'message':
-                    obs.current.next({
+                    fromNetwork.next({
                         type: 'newMessage',
                         payload: {
                             platform: 'gg',
@@ -99,13 +151,15 @@ const useGG = (subject: Subject<Action>) => {
 
         return () => {
             ws.current?.close();
+            setSession(undefined);
         }
-    }, [credentials?.token]);
+    }, [session]);
 };
 
 export const useConnection = () => {
-    const subject = new Subject<Action>();
-    useGG(subject);
+    const flowFromNetwork = useRef(new Subject<Action>());
+    const flowToNetwork = useRef(new Subject<ConnectionAction>());
+    useGG(flowFromNetwork.current, flowToNetwork.current);
 
-    return subject;
+    return { flowFromNetwork: flowFromNetwork.current, flowToNetwork: flowToNetwork.current };
 };

@@ -5,7 +5,12 @@ import { StateType } from '../../reducer/reducer';
 import { SettingsTabs } from './SettingsTabs';
 import { Statusbar } from './Statusbar';
 
-export const Sidebar = (props: { state: StateType, dispatch: Dispatch<Action> }) => {
+export interface SidebarProps {
+    state: StateType;
+    dispatch: Dispatch<Action>;
+}
+
+export const Sidebar = (props: SidebarProps) => {
     const { state, dispatch } = props;
 
     const switchView = (st: StateType) => {
