@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Subject } from "rxjs";
 import { Action } from "../reducer/actions";
-import { twitchCreds } from "./credentials";
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { ConnectionAction } from "./actions";
 
@@ -10,16 +9,16 @@ export interface Credentials {
     password: string;
 }
 
-export const getTwitchData = () => fetch('https://id.twitch.tv/oauth2/token', {
-    method: 'POST',
-    headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: `client_id=<${twitchCreds.clientId}>&client_secret=<${twitchCreds.clientSecret}>&grant_type=client_credentials`,
-})
-    .then(response => response.json())
-    .then(data => console.log(data));
+// export const getTwitchData = () => fetch('https://id.twitch.tv/oauth2/token', {
+//     method: 'POST',
+//     headers: {
+//         Accept: 'application/json',
+//         'Content-Type': 'application/x-www-form-urlencoded',
+//     },
+//     body: `client_id=<${twitchCreds.clientId}>&client_secret=<${twitchCreds.clientSecret}>&grant_type=client_credentials`,
+// })
+//     .then(response => response.json())
+//     .then(data => console.log(data));
 
 export const getGGsession = async (creds: Credentials) => {
     const formdata = new FormData();
